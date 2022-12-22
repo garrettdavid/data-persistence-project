@@ -1,16 +1,22 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MainManager : MonoBehaviour
 {
+    public static MainManager Instance;
+    public GameObject nameObj;
+    public string nameString;
     public Brick BrickPrefab;
     public int LineCount = 6;
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text TopScoreText;
+    private int topScore;
     public GameObject GameOverText;
     
     private bool m_Started = false;
@@ -36,6 +42,12 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+
+        LoadScore();
+
+        nameObj = GameObject.FindWithTag("name");
+        nameString = nameObj.name;
+        ScoreText.text = nameString + " : Score : 0";
     }
 
     private void Update()
@@ -65,12 +77,46 @@ public class MainManager : MonoBehaviour
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        ScoreText.text = nameString + $" : Score : {m_Points}";
     }
 
     public void GameOver()
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        if (m_Points > topScore) {
+            SaveScore();
+        }
+    }
+
+    [System.Serializable]
+    class SaveData
+    {
+        public string name;
+        public int score;
+    }
+
+    public void SaveScore()
+    {
+        SaveData data = new SaveData();
+        data.name = nameString;
+        data.score = m_Points;
+
+        string json = JsonUtility.ToJson(data);
+
+        File.WriteAllText(Application.persistentDataPath + "/topscore.json", json);
+    }
+
+    public void LoadScore()
+    {
+        string path = Application.persistentDataPath + "/topscore.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            topScore = data.score;
+            TopScoreText.text = "Best Score : " + data.name + " : " + topScore;
+            
+        }
     }
 }
